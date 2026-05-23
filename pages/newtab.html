@@ -1,0 +1,340 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>New Tab — PyWeb</title>
+<style>
+/* ── Reset ─────────────────────────────────── */
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#0f0f1a;--surface:#16161f;--surface2:#1e1e2c;--border:#252535;
+  --text:#ddddf0;--sub:#7878a0;--accent:#6c63ff;--accent2:#4d9fff;
+  --ok:#5dd98c;--warn:#f0c040;--err:#f06060;
+}
+html,body{height:100%;background:var(--bg);color:var(--text);
+  font-family:'Segoe UI',system-ui,sans-serif;overflow-x:hidden}
+
+/* ── Ambient bg ─────────────────────────────── */
+.ambient{position:fixed;inset:0;z-index:0;pointer-events:none;overflow:hidden}
+.orb{position:absolute;border-radius:50%;filter:blur(120px);animation:float 18s ease-in-out infinite}
+.orb1{width:600px;height:600px;background:rgba(108,99,255,.07);top:-100px;left:-100px;animation-delay:0s}
+.orb2{width:500px;height:500px;background:rgba(77,159,255,.06);bottom:-80px;right:-80px;animation-delay:-6s}
+.orb3{width:300px;height:300px;background:rgba(93,217,140,.04);top:50%;left:50%;transform:translate(-50%,-50%);animation-delay:-12s}
+@keyframes float{
+  0%,100%{transform:translate(0,0)}
+  33%{transform:translate(30px,-20px)}
+  66%{transform:translate(-20px,30px)}
+}
+.grid-bg{
+  position:fixed;inset:0;z-index:0;pointer-events:none;
+  background-image:
+    linear-gradient(rgba(255,255,255,.025) 1px,transparent 1px),
+    linear-gradient(90deg,rgba(255,255,255,.025) 1px,transparent 1px);
+  background-size:44px 44px;
+  mask-image:radial-gradient(ellipse 75% 75% at 50% 50%,black 30%,transparent 75%);
+}
+
+/* ── Layout ────────────────────────────────── */
+.page{position:relative;z-index:1;min-height:100vh;display:flex;
+  flex-direction:column;align-items:center;padding:0 24px 80px}
+
+/* ── Clock ─────────────────────────────────── */
+.clock-wrap{
+  margin-top:72px;text-align:center;
+  animation:slideIn .55s cubic-bezier(.16,1,.3,1) both
+}
+@keyframes slideIn{from{opacity:0;transform:translateY(-18px)}to{opacity:1;transform:none}}
+
+.clock{
+  font-size:88px;font-weight:200;letter-spacing:8px;line-height:1;
+  background:linear-gradient(135deg,var(--text) 50%,var(--sub));
+  -webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;
+}
+.date-line{margin-top:10px;font-size:13px;color:var(--sub);letter-spacing:3px;text-transform:uppercase}
+.greeting{margin-top:6px;font-size:17px;color:var(--sub);font-weight:300;
+  animation:fadeUp .7s .25s both}
+@keyframes fadeUp{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
+
+/* ── Search ─────────────────────────────────── */
+.search-wrap{
+  margin-top:40px;width:100%;max-width:600px;
+  animation:fadeUp .65s .1s both
+}
+.search-row{position:relative;display:flex;align-items:center}
+.search-icon{position:absolute;left:18px;opacity:.4;pointer-events:none;flex-shrink:0}
+.search-icon svg{display:block;width:18px;height:18px}
+#q{
+  width:100%;background:var(--surface);border:1px solid var(--border);border-radius:999px;
+  padding:15px 56px 15px 52px;font-size:15px;color:var(--text);outline:none;
+  transition:border-color .2s,box-shadow .2s,background .2s;font-family:inherit
+}
+#q::placeholder{color:var(--sub)}
+#q:focus{border-color:var(--accent);box-shadow:0 0 0 3px rgba(108,99,255,.14);background:var(--surface2)}
+.search-btn{
+  position:absolute;right:8px;background:var(--accent);border:none;border-radius:999px;
+  padding:7px 18px;font-size:13px;color:#fff;cursor:pointer;
+  transition:opacity .2s,transform .15s;font-family:inherit;font-weight:500
+}
+.search-btn:hover{opacity:.88;transform:scale(1.03)}
+
+.pills{display:flex;gap:7px;justify-content:center;margin-top:12px;flex-wrap:wrap}
+.pill{
+  padding:5px 13px;border-radius:999px;border:1px solid var(--border);
+  font-size:12px;color:var(--sub);cursor:pointer;background:transparent;
+  font-family:inherit;transition:all .18s
+}
+.pill:hover,.pill.on{border-color:var(--accent);color:var(--accent);background:rgba(108,99,255,.09)}
+
+/* ── Quick links ─────────────────────────────── */
+.section{
+  margin-top:52px;width:100%;max-width:700px;
+  animation:fadeUp .8s .3s both
+}
+.sec-title{font-size:11px;letter-spacing:2.5px;text-transform:uppercase;color:var(--sub);
+  margin-bottom:14px;font-weight:600}
+.links{display:grid;grid-template-columns:repeat(4,1fr);gap:11px}
+.card{
+  background:var(--surface);border:1px solid var(--border);border-radius:11px;
+  padding:17px 12px;text-align:center;cursor:pointer;text-decoration:none;
+  display:block;position:relative;overflow:hidden;
+  transition:transform .2s,border-color .2s,box-shadow .2s
+}
+.card::after{
+  content:'';position:absolute;inset:0;
+  background:linear-gradient(135deg,rgba(108,99,255,.07),transparent);
+  opacity:0;transition:opacity .2s
+}
+.card:hover{transform:translateY(-3px);border-color:rgba(108,99,255,.35);
+  box-shadow:0 8px 28px rgba(0,0,0,.35)}
+.card:hover::after{opacity:1}
+.card:active{transform:translateY(-1px)}
+.c-icon{
+  width:34px;height:34px;background:var(--surface2);border-radius:8px;
+  margin:0 auto 9px;display:flex;align-items:center;justify-content:center;
+  font-size:15px;font-weight:600;color:var(--sub);
+  transition:background .2s,color .2s
+}
+.card:hover .c-icon{background:var(--border);color:var(--text)}
+.c-name{font-size:12px;color:var(--sub);font-weight:500;
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
+  transition:color .2s}
+.card:hover .c-name{color:var(--text)}
+
+/* ── Stats bar ───────────────────────────────── */
+.stats{
+  display:flex;gap:16px;margin-top:40px;
+  animation:fadeUp .9s .45s both
+}
+.st{
+  background:var(--surface);border:1px solid var(--border);border-radius:10px;
+  padding:13px 20px;text-align:center;min-width:90px;
+  transition:border-color .2s
+}
+.st:hover{border-color:var(--accent)}
+.sv{font-size:22px;font-weight:600;color:var(--accent);line-height:1}
+.sl{font-size:10px;color:var(--sub);margin-top:4px;letter-spacing:1.5px;text-transform:uppercase}
+
+/* ── Quote ───────────────────────────────────── */
+.quote-wrap{
+  margin-top:44px;max-width:500px;text-align:center;
+  animation:fadeUp 1s .6s both
+}
+.qt{font-size:14px;color:var(--sub);font-style:italic;line-height:1.75;font-weight:300}
+.qa{margin-top:7px;font-size:12px;color:var(--accent);letter-spacing:.8px}
+
+/* ── Footer controls ─────────────────────────── */
+.foot{
+  position:fixed;bottom:18px;right:22px;display:flex;gap:8px;z-index:10;
+  opacity:.45;transition:opacity .2s
+}
+.foot:hover{opacity:1}
+.fb{
+  background:var(--surface);border:1px solid var(--border);border-radius:7px;
+  padding:6px 13px;font-size:11px;color:var(--sub);cursor:pointer;
+  font-family:inherit;transition:all .18s
+}
+.fb:hover{border-color:var(--accent);color:var(--accent)}
+
+/* ── Focus mode ──────────────────────────────── */
+body.focus .section,body.focus .stats,body.focus .quote-wrap{display:none}
+body.focus .clock-wrap{margin-top:160px}
+
+/* ── Scrollbar ────────────────────────────────── */
+::-webkit-scrollbar{width:5px}
+::-webkit-scrollbar-track{background:transparent}
+::-webkit-scrollbar-thumb{background:var(--border);border-radius:3px}
+</style>
+</head>
+<body>
+
+<div class="ambient">
+  <div class="orb orb1"></div>
+  <div class="orb orb2"></div>
+  <div class="orb orb3"></div>
+</div>
+<div class="grid-bg"></div>
+
+<div class="page">
+
+  <div class="clock-wrap">
+    <div class="clock" id="clock">00:00</div>
+    <div class="date-line" id="dateLine"></div>
+    <div class="greeting" id="greeting"></div>
+  </div>
+
+  <div class="search-wrap">
+    <div class="search-row">
+      <span class="search-icon">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"
+             stroke-linecap="round" stroke-linejoin="round">
+          <circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.5" y2="16.5"/>
+        </svg>
+      </span>
+      <input id="q" type="text" placeholder="Search or enter a URL..." autocomplete="off" autofocus>
+      <button class="search-btn" onclick="doSearch()">Go</button>
+    </div>
+    <div class="pills" id="pills"></div>
+  </div>
+
+  <div class="section">
+    <div class="sec-title">Quick Access</div>
+    <div class="links" id="links"></div>
+  </div>
+
+  <div class="stats">
+    <div class="st"><div class="sv" id="s-tabs">—</div><div class="sl">Tabs</div></div>
+    <div class="st"><div class="sv" id="s-hist">—</div><div class="sl">History</div></div>
+    <div class="st"><div class="sv" id="s-book">—</div><div class="sl">Bookmarks</div></div>
+    <div class="st"><div class="sv" id="s-blck">—</div><div class="sl">Blocked</div></div>
+  </div>
+
+  <div class="quote-wrap">
+    <div class="qt" id="qt"></div>
+    <div class="qa" id="qa"></div>
+  </div>
+
+</div>
+
+<div class="foot">
+  <button class="fb" id="focusBtn" onclick="toggleFocus()">Focus</button>
+  <button class="fb" onclick="cycleAccent()">Theme</button>
+</div>
+
+<script>
+// Clock
+function tick(){
+  var n=new Date(),h=n.getHours(),m=n.getMinutes();
+  document.getElementById('clock').textContent=
+    String(h).padStart(2,'0')+':'+String(m).padStart(2,'0');
+  var days=['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
+  var months=['January','February','March','April','May','June',
+              'July','August','September','October','November','December'];
+  document.getElementById('dateLine').textContent=
+    days[n.getDay()]+', '+months[n.getMonth()]+' '+n.getDate();
+  var g=h<5?'Good night':h<12?'Good morning':h<17?'Good afternoon':'Good evening';
+  document.getElementById('greeting').textContent=g;
+}
+tick(); setInterval(tick,1000);
+
+// Search engines
+var engines={
+  Google:'https://www.google.com/search?q=',
+  DuckDuckGo:'https://duckduckgo.com/?q=',
+  Bing:'https://www.bing.com/search?q=',
+  Brave:'https://search.brave.com/search?q='
+};
+var active='Google';
+var pillBox=document.getElementById('pills');
+Object.keys(engines).forEach(function(k){
+  var b=document.createElement('button');
+  b.className='pill'+(k===active?' on':'');
+  b.textContent=k;
+  b.onclick=function(){
+    active=k;
+    document.querySelectorAll('.pill').forEach(function(p){p.classList.remove('on');});
+    b.classList.add('on');
+    document.getElementById('q').focus();
+  };
+  pillBox.appendChild(b);
+});
+
+function doSearch(){
+  var v=document.getElementById('q').value.trim();
+  if(!v)return;
+  var url;
+  if(/^[a-zA-Z][\w\-.]*:\/\//.test(v)) url=v;
+  else if(/^[\w\-]+\.[a-zA-Z]{2,}/.test(v)&&v.indexOf(' ')<0) url='https://'+v;
+  else url=engines[active]+encodeURIComponent(v);
+  window.location.href=url;
+}
+document.getElementById('q').addEventListener('keydown',function(e){
+  if(e.key==='Enter') doSearch();
+});
+
+// Quick links
+var LINKS=[
+  {n:'Google',   u:'https://google.com',             i:'G'},
+  {n:'YouTube',  u:'https://youtube.com',             i:'▶'},
+  {n:'GitHub',   u:'https://github.com',              i:'<>'},
+  {n:'Wikipedia',u:'https://wikipedia.org',           i:'W'},
+  {n:'DDG',      u:'https://duckduckgo.com',          i:'D'},
+  {n:'HN',       u:'https://news.ycombinator.com',    i:'Y'},
+  {n:'Gemini',   u:'https://gemini.google.com',       i:'✦'},
+  {n:'Proton',   u:'https://proton.me',               i:'P'},
+];
+var box=document.getElementById('links');
+LINKS.forEach(function(item){
+  var a=document.createElement('a');
+  a.className='card'; a.href=item.u;
+  a.innerHTML='<div class="c-icon">'+item.i+'</div><div class="c-name">'+item.n+'</div>';
+  a.onclick=function(e){e.preventDefault();window.location.href=item.u;};
+  box.appendChild(a);
+});
+
+// Stats — PyWeb injects these
+function pwSetStats(tabs,hist,book,blck){
+  document.getElementById('s-tabs').textContent=tabs||0;
+  document.getElementById('s-hist').textContent=hist||0;
+  document.getElementById('s-book').textContent=book||0;
+  document.getElementById('s-blck').textContent=blck||0;
+}
+
+// Quotes
+var QQ=[
+  {t:'The web does not just connect machines, it connects people.',a:'Tim Berners-Lee'},
+  {t:'Simplicity is the soul of efficiency.',a:'Austin Freeman'},
+  {t:'First, solve the problem. Then, write the code.',a:'John Johnson'},
+  {t:'Any sufficiently advanced technology is indistinguishable from magic.',a:'Arthur C. Clarke'},
+  {t:'Code is like humor. When you have to explain it, it\'s bad.',a:'Cory House'},
+  {t:'Privacy is not something that I\'m merely entitled to, it\'s an absolute prerequisite.',a:'Marlon Brando'},
+  {t:'The best way to predict the future is to invent it.',a:'Alan Kay'},
+  {t:'Talk is cheap. Show me the code.',a:'Linus Torvalds'},
+];
+var qq=QQ[Math.floor(Math.random()*QQ.length)];
+document.getElementById('qt').textContent='\u201c'+qq.t+'\u201d';
+document.getElementById('qa').textContent='\u2014 '+qq.a;
+
+// Focus mode
+var focusOn=false;
+function toggleFocus(){
+  focusOn=!focusOn;
+  document.body.classList.toggle('focus',focusOn);
+  document.getElementById('focusBtn').textContent=focusOn?'Exit Focus':'Focus';
+}
+
+// Theme accent cycle
+var accents=['#6c63ff','#4d9fff','#5dd98c','#f0c040','#f06060','#a06fff'];
+var ai=0;
+function cycleAccent(){
+  ai=(ai+1)%accents.length;
+  document.documentElement.style.setProperty('--accent',accents[ai]);
+}
+
+// Esc refocus
+document.addEventListener('keydown',function(e){
+  if(e.key==='Escape') document.getElementById('q').focus();
+});
+</script>
+</body>
+</html>
