@@ -1,0 +1,258 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>History — PyWeb</title>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#0f0f1a;--surface:#16161f;--surface2:#1e1e2c;--border:#252535;
+  --text:#ddddf0;--sub:#7878a0;--accent:#6c63ff;--err:#f06060;
+}
+html,body{min-height:100%;background:var(--bg);color:var(--text);
+  font-family:'Segoe UI',system-ui,sans-serif}
+
+.ambient{position:fixed;inset:0;z-index:0;pointer-events:none}
+.orb{position:absolute;border-radius:50%;filter:blur(140px);opacity:.6}
+.orb1{width:400px;height:400px;background:rgba(108,99,255,.06);top:-60px;left:-60px}
+.orb2{width:350px;height:350px;background:rgba(77,159,255,.05);bottom:-40px;right:-40px}
+
+.wrap{position:relative;z-index:1;max-width:860px;margin:0 auto;padding:40px 28px 80px}
+
+/* Header */
+.hdr{display:flex;align-items:center;gap:16px;margin-bottom:32px;
+  animation:slideIn .45s cubic-bezier(.16,1,.3,1) both}
+@keyframes slideIn{from{opacity:0;transform:translateY(-14px)}to{opacity:1;transform:none}}
+.hdr-icon{width:40px;height:40px;background:var(--surface2);border:1px solid var(--border);
+  border-radius:10px;display:flex;align-items:center;justify-content:center}
+.hdr-icon svg{width:18px;height:18px;stroke:var(--accent);fill:none;stroke-width:1.8;
+  stroke-linecap:round;stroke-linejoin:round}
+.hdr-title{font-size:22px;font-weight:300;letter-spacing:1px}
+.hdr-count{margin-left:auto;font-size:13px;color:var(--sub);
+  background:var(--surface2);border:1px solid var(--border);
+  border-radius:6px;padding:4px 12px}
+
+/* Controls */
+.controls{display:flex;gap:10px;margin-bottom:24px;
+  animation:fadeUp .5s .1s both}
+@keyframes fadeUp{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
+.search-box{
+  position:relative;flex:1
+}
+.search-box svg{position:absolute;left:13px;top:50%;transform:translateY(-50%);
+  width:15px;height:15px;stroke:var(--sub);fill:none;stroke-width:1.8;
+  stroke-linecap:round;stroke-linejoin:round;pointer-events:none}
+#histSearch{
+  width:100%;background:var(--surface);border:1px solid var(--border);
+  border-radius:8px;padding:10px 14px 10px 38px;font-size:13px;color:var(--text);
+  outline:none;font-family:inherit;transition:border-color .2s,box-shadow .2s
+}
+#histSearch::placeholder{color:var(--sub)}
+#histSearch:focus{border-color:var(--accent);box-shadow:0 0 0 3px rgba(108,99,255,.12)}
+.btn{
+  background:var(--surface);border:1px solid var(--border);border-radius:8px;
+  padding:9px 16px;font-size:13px;color:var(--sub);cursor:pointer;
+  font-family:inherit;white-space:nowrap;transition:all .18s
+}
+.btn:hover{border-color:var(--accent);color:var(--accent)}
+.btn.danger:hover{border-color:var(--err);color:var(--err)}
+
+/* Group by date */
+.day-group{margin-bottom:28px;animation:fadeUp .5s both}
+.day-label{
+  font-size:11px;letter-spacing:2px;text-transform:uppercase;color:var(--sub);
+  padding:0 0 10px;border-bottom:1px solid var(--border);margin-bottom:2px;
+  font-weight:600
+}
+
+/* History item */
+.hist-item{
+  display:flex;align-items:center;gap:12px;padding:11px 14px;
+  border-radius:8px;cursor:pointer;transition:background .15s;
+  border-bottom:1px solid rgba(255,255,255,.03)
+}
+.hist-item:hover{background:var(--surface)}
+.hist-item:hover .h-actions{opacity:1}
+.h-favicon{
+  width:28px;height:28px;background:var(--surface2);border-radius:6px;
+  display:flex;align-items:center;justify-content:center;flex-shrink:0;
+  font-size:12px;font-weight:600;color:var(--sub)
+}
+.h-info{flex:1;min-width:0}
+.h-title{font-size:13px;color:var(--text);white-space:nowrap;
+  overflow:hidden;text-overflow:ellipsis}
+.h-url{font-size:11px;color:var(--sub);white-space:nowrap;overflow:hidden;
+  text-overflow:ellipsis;margin-top:2px}
+.h-time{font-size:11px;color:var(--sub);flex-shrink:0;min-width:44px;text-align:right}
+.h-actions{opacity:0;display:flex;gap:6px;transition:opacity .15s}
+.h-act{
+  background:transparent;border:1px solid var(--border);border-radius:5px;
+  padding:4px 9px;font-size:11px;color:var(--sub);cursor:pointer;
+  font-family:inherit;transition:all .15s
+}
+.h-act:hover{border-color:var(--accent);color:var(--accent)}
+.h-act.del:hover{border-color:var(--err);color:var(--err)}
+
+/* Empty state */
+.empty{
+  text-align:center;padding:80px 20px;
+  animation:fadeUp .6s both
+}
+.empty svg{width:52px;height:52px;stroke:var(--border);fill:none;stroke-width:1.4;
+  stroke-linecap:round;margin-bottom:16px}
+.empty-title{font-size:18px;font-weight:300;color:var(--sub);margin-bottom:8px}
+.empty-sub{font-size:13px;color:var(--border)}
+
+::-webkit-scrollbar{width:5px}
+::-webkit-scrollbar-track{background:transparent}
+::-webkit-scrollbar-thumb{background:var(--border);border-radius:3px}
+</style>
+</head>
+<body>
+
+<div class="ambient">
+  <div class="orb orb1"></div>
+  <div class="orb orb2"></div>
+</div>
+
+<div class="wrap">
+
+  <div class="hdr">
+    <div class="hdr-icon">
+      <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="8"/>
+        <polyline points="12 8 12 12 15 14"/></svg>
+    </div>
+    <h1 class="hdr-title">History</h1>
+    <div class="hdr-count" id="countBadge">0 visits</div>
+  </div>
+
+  <div class="controls">
+    <div class="search-box">
+      <svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/>
+        <line x1="21" y1="21" x2="16.5" y2="16.5"/></svg>
+      <input id="histSearch" type="text" placeholder="Search history...">
+    </div>
+    <button class="btn" onclick="sortToggle()">Sort</button>
+    <button class="btn danger" onclick="clearAll()">Clear All</button>
+  </div>
+
+  <div id="histList"></div>
+
+</div>
+
+<script>
+/* ── Data injected by PyWeb via runJavaScript ───────────────────
+   PyWeb calls:  pwSetHistory([{url, title, time}, ...])
+   or it's loaded from localStorage for demo                      */
+
+var HISTORY = [];
+var sortAsc  = false;
+
+function pwSetHistory(arr){
+  HISTORY = arr || [];
+  render(HISTORY);
+}
+
+// Demo data if no injection
+if(!window.__pyweb_history_loaded){
+  setTimeout(function(){
+    if(HISTORY.length===0){
+      pwSetHistory([]);
+    }
+  },200);
+}
+
+function groupByDate(items){
+  var groups={};
+  items.forEach(function(item){
+    var d=item.date||item.time||'Today';
+    if(!groups[d]) groups[d]=[];
+    groups[d].push(item);
+  });
+  return groups;
+}
+
+function favicon(url){
+  try{
+    var u=new URL(url);
+    return u.hostname.replace('www.','').charAt(0).toUpperCase();
+  }catch(e){return '?'}
+}
+
+function render(items){
+  var q=document.getElementById('histSearch').value.toLowerCase();
+  var filtered=q?items.filter(function(i){
+    return (i.url||'').toLowerCase().includes(q)||(i.title||'').toLowerCase().includes(q);
+  }):items;
+
+  document.getElementById('countBadge').textContent=filtered.length+' visit'+(filtered.length!==1?'s':'');
+
+  var box=document.getElementById('histList');
+  if(!filtered.length){
+    box.innerHTML='<div class="empty">'+
+      '<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="8"/><polyline points="12 8 12 12 15 14"/></svg>'+
+      '<div class="empty-title">No history found</div>'+
+      '<div class="empty-sub">Visited pages will appear here</div></div>';
+    return;
+  }
+
+  var groups=groupByDate(filtered);
+  var html='';
+  Object.keys(groups).forEach(function(day){
+    html+='<div class="day-group"><div class="day-label">'+day+'</div>';
+    groups[day].forEach(function(item,idx){
+      var fav=favicon(item.url||'');
+      html+='<div class="hist-item" onclick="openUrl(\''+encodeURIComponent(item.url||'')+'\')">'
+        +'<div class="h-favicon">'+fav+'</div>'
+        +'<div class="h-info">'
+        +'<div class="h-title">'+(item.title||item.url||'Untitled')+'</div>'
+        +'<div class="h-url">'+(item.url||'')+'</div>'
+        +'</div>'
+        +'<div class="h-time">'+(item.time_str||'')+'</div>'
+        +'<div class="h-actions">'
+        +'<button class="h-act" onclick="event.stopPropagation();copyUrl(\''+encodeURIComponent(item.url||'')+'\')">Copy</button>'
+        +'<button class="h-act del" onclick="event.stopPropagation();deleteItem('+idx+')">Remove</button>'
+        +'</div>'
+        +'</div>';
+    });
+    html+='</div>';
+  });
+  box.innerHTML=html;
+}
+
+function openUrl(enc){
+  var url=decodeURIComponent(enc);
+  if(window.pyweb_open) window.pyweb_open(url);
+  else window.location.href=url;
+}
+
+function copyUrl(enc){
+  navigator.clipboard.writeText(decodeURIComponent(enc)).catch(function(){});
+}
+
+function deleteItem(idx){
+  HISTORY.splice(idx,1);
+  render(HISTORY);
+  if(window.pyweb_delete_history) window.pyweb_delete_history(idx);
+}
+
+function clearAll(){
+  if(confirm('Clear all history?')){
+    HISTORY=[];render(HISTORY);
+    if(window.pyweb_clear_history) window.pyweb_clear_history();
+  }
+}
+
+function sortToggle(){
+  sortAsc=!sortAsc;
+  HISTORY.reverse();
+  render(HISTORY);
+}
+
+document.getElementById('histSearch').addEventListener('input',function(){
+  render(HISTORY);
+});
+</script>
+</body>
+</html>
